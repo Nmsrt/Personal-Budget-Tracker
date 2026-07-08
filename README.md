@@ -1,116 +1,192 @@
-# Budget Tracker v2
+<div align="center">
 
-A clean personal finance tracker — white UI, green & black accents, friendly typography.
-Works offline (localStorage) out of the box. Optionally syncs to Supabase in real time.
+<!-- Replace with your project logo or banner -->
+<img src="https://via.placeholder.com/120x120.png?text=💰" alt="Project Logo" width="120" height="120" />
+
+<h1>Budget Tracker</h1>
+
+<p><em>A clean personal finance tracker with a white UI and green &amp; black accents — works fully offline out of the box, with optional real-time Supabase sync across devices.</em></p>
+
+[![React](https://img.shields.io/badge/React-18-61dafb?logo=react&logoColor=white)](https://react.dev/)
+[![Vite](https://img.shields.io/badge/Vite-5-646cff?logo=vite&logoColor=white)](https://vitejs.dev/)
+[![Supabase](https://img.shields.io/badge/Supabase-optional-3fcf8e?logo=supabase&logoColor=white)](https://supabase.com/)
+[![Issues](https://img.shields.io/github/issues/Nmsrt/personal-budget-tracker)](https://github.com/Nmsrt/personal-budget-tracker/issues)
+
+<br />
+
+[Report Bug](https://github.com/Nmsrt/personal-budget-tracker/issues/new) · [Request Feature](https://github.com/Nmsrt/personal-budget-tracker/issues/new)
+
+</div>
 
 ---
 
-## ✅ Step-by-Step Setup
+## Table of Contents
 
-### Step 1 — Install Node.js (if you haven't already)
-
-1. Go to https://nodejs.org
-2. Download the **LTS** version and install it
-3. To confirm it works, open a terminal and run:
-   ```
-   node -v
-   npm -v
-   ```
-   Both should print a version number.
+- [Overview](#overview)
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Getting Started](#getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Installation](#installation)
+- [Usage](#usage)
+- [Supabase Sync (Optional)](#supabase-sync-optional)
+- [Deployment](#deployment)
+- [Project Structure](#project-structure)
+- [Troubleshooting](#troubleshooting)
+- [License](#license)
+- [Contact](#contact)
 
 ---
 
-### Step 2 — Install dependencies
+## Overview
 
-1. Open a terminal (Command Prompt, PowerShell, or Terminal)
-2. Navigate to this folder:
+A three-page personal budget tracker (PHP currency) built with React 18 and Vite. It tracks multiple accounts, logged expenses, and weekly allowances with a clean, friendly interface. All data is saved to your browser's localStorage by default — no account or backend required. Connect a free Supabase project and the same data syncs in real time across all your devices.
+
+---
+
+## Features
+
+- ✅ **Dashboard** — total balance, this-week + all-time spend, spending by category, recent expenses.
+- ✅ **Multiple accounts** — On-Hand, BDO, GCash, and any custom accounts you add.
+- ✅ **Transfers** — move money between accounts.
+- ✅ **Weekly budget** — set a weekly allowance and track progress with a live bar.
+- ✅ **Expense logging** — log with description, category, account, and date; edit or delete (with undo) any time.
+- ✅ **Auto-deduction** — expenses automatically reduce the selected account balance.
+- ✅ **Supabase sync** — optional real-time sync across all your devices.
+- ✅ **Offline fallback** — always saves to localStorage, even without Supabase.
+- ✅ **Export / Import** — download data as JSON, restore on any device.
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Frontend | [React 18](https://react.dev/) |
+| Build Tool | [Vite](https://vitejs.dev/) |
+| Styling | Custom CSS (single global stylesheet) |
+| Persistence | localStorage + [Supabase](https://supabase.com/) (optional, real-time) |
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+- [Node.js](https://nodejs.org/) `>= 18.x`
+- [npm](https://www.npmjs.com/) `>= 9.x`
+
+Confirm both are installed:
+
+```bash
+node -v
+npm -v
+```
+
+### Installation
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/Nmsrt/personal-budget-tracker.git
+   cd personal-budget-tracker
    ```
-   cd path/to/budget-tracker
-   ```
-3. Install packages:
-   ```
+
+2. **Install dependencies:**
+   ```bash
    npm install
    ```
-   This downloads React, the Supabase client, and Vite into a `node_modules` folder.
+
+3. **Start the development server:**
+   ```bash
+   npm run dev
+   ```
+
+The app should now be running at `http://localhost:5173`.
+
+It works fully without Supabase — data is saved to your browser's localStorage and the sync badge shows **"Offline"**. That is expected, and the app works perfectly this way.
 
 ---
 
-### Step 3 — Run the app (offline / local mode)
+## Usage
 
-```
+### Development
+
+```bash
 npm run dev
 ```
 
-Open your browser to **http://localhost:5173**
+### Production Build
 
-The app runs fully without Supabase — data is saved to your browser's localStorage.
-The sync badge will show **"Local"** — that is expected and the app works perfectly this way.
+```bash
+npm run build
+```
+
+### Preview Production Build
+
+```bash
+npm run preview
+```
 
 ---
 
-### Step 4 — (Optional) Connect Supabase for real-time sync
+## Supabase Sync (Optional)
 
-Skip this if you only need local storage.
+Skip this section if local storage is all you need.
 
-#### 4a — Create a Supabase project
+### 1. Create a Supabase project
 
-1. Go to https://supabase.com and sign in (GitHub login works)
-2. Click **"New project"** → give it a name and a database password
-3. Choose region: **Southeast Asia (Singapore)** — best for Philippines
-4. Wait a minute for the project to provision
+1. Go to [supabase.com](https://supabase.com) and sign in (GitHub login works).
+2. Click **"New project"** → give it a name and a database password.
+3. Choose region: **Southeast Asia (Singapore)** — best for the Philippines.
+4. Wait a minute for the project to provision.
 
-#### 4b — Create the budget table
+### 2. Create the budget table
 
-1. In your project, open **SQL Editor** in the left sidebar
-2. Click **"New query"**
-3. Paste the contents of `supabase/schema.sql` from this repo and click **Run**
+1. In your project, open **SQL Editor** in the left sidebar.
+2. Click **"New query"**.
+3. Paste the contents of [`supabase/schema.sql`](supabase/schema.sql) from this repo and click **Run**.
 
-This creates a single-row `budget` table, opens access for the app, and enables
-realtime updates.
+This creates a single-row `budget` table, opens access for the app, and enables realtime updates.
 
-#### 4c — Get your API credentials
+### 3. Get your API credentials
 
-1. Go to **Settings → API** in the left sidebar
+1. Go to **Settings → API** in the left sidebar.
 2. Copy two values:
    - **Project URL** (looks like `https://abcdefgh.supabase.co`)
    - **anon / public key** (long string starting with `eyJ…`)
 
-#### 4d — Create your .env file
+### 4. Create your `.env` file
 
-1. In the `budget-tracker` folder, copy the example file:
-   - On Mac/Linux: `cp .env.example .env`
-   - On Windows: `copy .env.example .env`
-2. Open `.env` in any text editor (Notepad, VS Code, etc.)
-3. Fill in the values:
+1. Copy the example file:
+   ```bash
+   # Mac/Linux
+   cp .env.example .env
 
-```env
-VITE_SUPABASE_URL=https://your_project_ref.supabase.co
-VITE_SUPABASE_ANON_KEY=paste_your_anon_key_here
-```
-
-4. Save the file
-5. Restart the dev server (`Ctrl+C` then `npm run dev` again)
+   # Windows
+   copy .env.example .env
+   ```
+2. Fill in the values:
+   ```env
+   VITE_SUPABASE_URL=https://your_project_ref.supabase.co
+   VITE_SUPABASE_ANON_KEY=paste_your_anon_key_here
+   ```
+3. Restart the dev server (`Ctrl+C`, then `npm run dev` again).
 
 The sync badge will now show **"Synced"** in green when connected.
 
-> ⚠️ This app has no login — anyone who has your project URL **and** anon key can
-> read/write the budget row. Fine for personal use; don't share the keys publicly.
+> ⚠️ This app has no login — anyone who has your project URL **and** anon key can read/write the budget row. Fine for personal use; don't share the keys publicly.
 
 ---
 
-### Step 5 — Build for production (optional deployment)
+## Deployment
 
-```
-npm run build
-```
+`npm run build` creates a `dist/` folder you can deploy to Vercel, Netlify, or GitHub Pages.
 
-This creates a `dist/` folder you can deploy to Vercel, Netlify, or GitHub Pages.
+### Deploy to Vercel (easiest)
 
-#### Deploy to Vercel (easiest)
-
-1. Push the project to a GitHub repository
-2. Go to https://vercel.com → New Project → import your repo
-3. Add both `VITE_*` environment variables under **Settings → Environment Variables**
+1. Push the project to a GitHub repository.
+2. Go to [vercel.com](https://vercel.com) → **New Project** → import your repo.
+3. Add both `VITE_*` environment variables under **Settings → Environment Variables**.
 4. Click **Deploy** ✅
 
 ---
@@ -118,54 +194,29 @@ This creates a `dist/` folder you can deploy to Vercel, Netlify, or GitHub Pages
 ## Project Structure
 
 ```
-budget-tracker/
+personal-budget-tracker/
 ├── index.html
 ├── vite.config.js
 ├── package.json
-├── .env.example          ← copy this to .env and fill in your values
-├── .gitignore
+├── .env.example              # copy to .env and fill in your values
 ├── supabase/
-│   └── schema.sql        ← one-time table setup (run in Supabase SQL Editor)
+│   └── schema.sql            # one-time table setup (run in Supabase SQL Editor)
 └── src/
-    ├── main.jsx
-    ├── App.jsx
+    ├── main.jsx              # entry point
+    ├── App.jsx               # root component + page switching
     ├── supabase/
-    │   └── config.js     ← Supabase init + save/subscribe helpers
+    │   └── config.js         # Supabase init + save/subscribe helpers
     ├── hooks/
-    │   └── useBudget.js  ← all state, sync logic, localStorage fallback
+    │   └── useBudget.js      # all state, sync logic, localStorage fallback
     ├── pages/
     │   ├── Dashboard.jsx
+    │   ├── Expenses.jsx
     │   └── Weekly.jsx
-    ├── components/
-    │   ├── Layout.jsx
-    │   ├── Modal.jsx
-    │   ├── Icon.jsx
-    │   ├── AccountModal.jsx
-    │   ├── ExpenseModal.jsx
-    │   ├── AllowanceModal.jsx
-    │   ├── TransferModal.jsx
-    │   ├── ConfirmModal.jsx
-    │   └── Toast.jsx
-    ├── utils/
-    │   ├── constants.js
-    │   └── helpers.js
+    ├── components/           # Layout, Modal, Toast, and modal dialogs
+    ├── utils/                # constants + helpers (money/date formatting)
     └── styles/
-        └── global.css
+        └── global.css        # single global stylesheet
 ```
-
----
-
-## Features
-
-- **Dashboard** — total balance, this-week + all-time spend, spending by category, recent expenses
-- **Multiple Accounts** — On-Hand, BDO, GCash, and any custom accounts
-- **Transfers** — move money between accounts
-- **Weekly Budget** — set a weekly allowance and track progress with a live bar
-- **Expense Logging** — log with description, category, account, and date; edit or delete (with undo) any time
-- **Auto-deduction** — expenses automatically reduce the selected account balance
-- **Supabase Sync** — real-time sync across all your devices (optional)
-- **Offline fallback** — always saves to localStorage even without Supabase
-- **Export / Import** — download data as JSON, restore on any device
 
 ---
 
@@ -179,3 +230,23 @@ budget-tracker/
 | "permission denied" / policy errors in console | Re-run `supabase/schema.sql` — the RLS policy is missing |
 | Changes don't appear on other devices | Realtime not enabled on the table — re-run the last line of `supabase/schema.sql` |
 | Data not saving across sessions | Clear localStorage and reimport your JSON backup |
+
+---
+
+## License
+
+This project is open-source and available for personal use and inspiration.
+
+---
+
+## Contact
+
+**Neo Monserrat** — neo.monserrat@gmail.com
+
+Project Link: [https://github.com/Nmsrt/personal-budget-tracker](https://github.com/Nmsrt/personal-budget-tracker)
+
+---
+
+<div align="center">
+  <sub>Built with ❤️ by <a href="https://github.com/Nmsrt">Nmsrt</a></sub>
+</div>
