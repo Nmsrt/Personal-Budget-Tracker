@@ -15,7 +15,11 @@ There is no test suite, linter, or TypeScript — plain JS/JSX with React 18 + V
 
 ## Architecture
 
-Personal budget tracker (PHP currency). Three-page SPA with no router — `App.jsx` switches between `pages/Dashboard.jsx`, `pages/Expenses.jsx`, and `pages/Weekly.jsx` via local `page` state.
+Personal budget tracker (PHP currency). Three-page SPA with no router — `App.jsx` switches between `pages/Dashboard.jsx` (default), `pages/Expenses.jsx`, and `pages/Settings.jsx` via local `page` state. Nav order comes from the `NAV` array in `components/Layout.jsx`.
+
+### Settings (per-device, not synced)
+
+`useSettings` (`src/hooks/useSettings.js`) holds `{ theme, hideBalances }` (unknown keys are dropped on load) in localStorage key `budgetapp_settings`. Separate from the budget object on purpose: never synced to Supabase or included in export/import. `theme` sets `data-theme` on `<html>`; an inline script in `index.html` applies it before first paint, so keep that key/shape in sync.
 
 ### Single state object + dual persistence
 
@@ -34,13 +38,18 @@ Sync loop guard: incoming Supabase data (initial read and realtime `postgres_cha
 
 Account balances are stored, not derived. Adding an expense deducts `amount` from the selected account; deleting an expense refunds it (see `addExpense` / `deleteExpense` in `App.jsx`). Any new expense mutation must update `expenses` and `accounts` together in the same `update` call, or balances drift.
 
-### Weeks
+### Months
 
-Weekly budgets are keyed by the ISO date of the week's **Monday** (`getWeekKey` in `src/utils/helpers.js`). `data.weeks[weekKey].allowance` holds the allowance; weekly spend is derived by filtering expenses whose date maps to the same key.
+Spending is summarized per calendar month, keyed `YYYY-MM` (`monthKey` / `shiftMonth` / `monthLabel` in `src/utils/helpers.js`). The Expenses page is scoped to one month (navigator + month-over-month trend; search and category chips filter within it); the Dashboard category card and the account sheet use the current month. `data.weeks` (per-week allowances from a removed weekly-budget feature) stays in the data shape so stored data and backups keep round-tripping — nothing reads it.
 
 ### Other conventions
 
 - Modals are controlled components rendered at the `App.jsx` level, built on the generic `components/Modal.jsx`.
-- Styling is a single global stylesheet (`src/styles/global.css`); no CSS modules or framework.
+- Never set `overflow` on `html`/`body` (iOS page-scroll lockups); `.app` uses `overflow-x: clip`. `Modal.jsx` blocks page scroll by cancelling wheel/touchmove on the backdrop (non-passive listeners) plus `overscroll-behavior: contain` on `.modal-box`.
+- Styling is a single global stylesheet (`src/styles/global.css`); no CSS modules or framework. Brand is neon green (`--brand*`): neon fills take dark `--on-brand` text, and `--brand-deep` is the readable text shade. Display font is Space Grotesk. All colors are tokens on `:root`; the dark palette is defined twice (under `prefers-color-scheme: dark` and under `[data-theme="dark"]`) and both blocks must stay identical. Use tokens, not hex literals, except on always-dark surfaces (sidebar, mobile top bar, toast).
+- Mobile (≤680px) is an iOS PWA target: `viewport-fit=cover` + `default` status bar; fixed elements pad with `env(safe-area-inset-*)`. The body carries neon mint/cyan/lime glows at the top (`--bg-gradient`) that show through the frosted-glass Dashboard hero; `theme-color` is set by `useSettings` to `--bg-top` per effective theme, so keep `THEME_COLOR` there in sync with `--bg-top` in CSS. Form controls must stay ≥16px on mobile or iOS zooms on focus.
+- Expense rows have no inline buttons: tapping one opens the edit `ExpenseModal`, which also holds Delete (with undo toast). Mobile adds via the `.fab`; desktop via the page-header button.
+- Mobile nav is a floating frosted pill; `--nav-offset` (in `:root`) is its gap from the bottom edge and also drives `.main` bottom padding, the FAB and the toast position — change them together through that variable.
+- Dashboard account rows open `AccountDetailModal` (edit/delete live in its header via `Modal`'s `actions` prop). `settings.hideBalances` masks every money figure on the Dashboard, in that sheet, and the account balances in `ExpenseModal` (use `MASK` from `helpers.js`).
 - Money is formatted with `fmt` in `helpers.js` (en-PH, PHP).
 - Export/import is a full-object JSON dump/restore; imported JSON is only validated for `accounts` and `expenses` keys.

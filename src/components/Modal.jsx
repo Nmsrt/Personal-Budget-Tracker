@@ -1,11 +1,29 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { Icon } from './Icon'
 
-export function Modal({ open, onClose, title, children }) {
+// Page scroll lock without touching html/body overflow (that locks up iOS page scrolling):
+// wheel/touch gestures on the backdrop itself are cancelled, and .modal-box has
+// `overscroll-behavior: contain` so scrolling inside the sheet never chains to the page.
+// Listeners must be non-passive to call preventDefault, so they're attached manually.
+const useBackdropScrollLock = (open, backdropRef, boxRef) => {
   useEffect(() => {
-    document.body.style.overflow = open ? 'hidden' : ''
-    return () => { document.body.style.overflow = '' }
-  }, [open])
+    const backdrop = backdropRef.current
+    if (!open || !backdrop) return
+    const block = (e) => { if (!boxRef.current?.contains(e.target)) e.preventDefault() }
+    backdrop.addEventListener('wheel', block, { passive: false })
+    backdrop.addEventListener('touchmove', block, { passive: false })
+    return () => {
+      backdrop.removeEventListener('wheel', block)
+      backdrop.removeEventListener('touchmove', block)
+    }
+  }, [open, backdropRef, boxRef])
+}
+
+// `actions` (optional) renders extra header buttons to the left of the close button.
+export function Modal({ open, onClose, title, actions, children }) {
+  const backdropRef = useRef(null)
+  const boxRef      = useRef(null)
+  useBackdropScrollLock(open, backdropRef, boxRef)
 
   useEffect(() => {
     if (!open) return
@@ -17,13 +35,16 @@ export function Modal({ open, onClose, title, children }) {
   if (!open) return null
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal-box" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+    <div ref={backdropRef} className="modal-backdrop" onClick={onClose}>
+      <div ref={boxRef} className="modal-box" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h3 className="modal-title">{title}</h3>
-          <button className="modal-close" onClick={onClose} aria-label="Close">
-            <Icon name="x" size={18} />
-          </button>
+          <div className="modal-header__actions">
+            {actions}
+            <button className="modal-close" onClick={onClose} aria-label="Close">
+              <Icon name="x" size={18} />
+            </button>
+          </div>
         </div>
         <div className="modal-body">{children}</div>
       </div>

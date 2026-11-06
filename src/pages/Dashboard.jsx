@@ -1,83 +1,136 @@
 import { useMemo } from 'react'
 import { Icon } from '../components/Icon'
 import { CAT_ICONS } from '../utils/constants'
-import { fmt } from '../utils/helpers'
+import { fmt, monthKey, monthLabel, MASK } from '../utils/helpers'
+import { useToday } from '../hooks/useToday'
 
-export function Dashboard({ data, total, wkTotal, onAddAccount, onEditAccount, onDeleteAccount, onAddExpense, onTransfer }) {
-  const totalSpent = useMemo(
-    () => data.expenses.reduce((s, e) => s + e.amount, 0),
-    [data.expenses]
-  )
+export function Dashboard({
+  data, total,
+  hideBalances, onToggleHide,
+  onAddExpense, onTransfer, onAddAccount, onOpenAccount,
+}) {
+  const thisMonth = monthKey(useToday())
 
-  const catTotals = useMemo(() => {
+  // Category breakdown for the current month
+  const { monthSpent, catTotals } = useMemo(() => {
     const t = {}
-    data.expenses.forEach((e) => { t[e.category] = (t[e.category] || 0) + e.amount })
-    return Object.entries(t).sort((a, b) => b[1] - a[1]).slice(0, 6)
-  }, [data.expenses])
+    let spent = 0
+    data.expenses.forEach((e) => {
+      if (monthKey(e.date) !== thisMonth) return
+      spent += e.amount
+      t[e.category] = (t[e.category] || 0) + e.amount
+    })
+    return { monthSpent: spent, catTotals: Object.entries(t).sort((a, b) => b[1] - a[1]).slice(0, 6) }
+  }, [data.expenses, thisMonth])
+
+  const money = (n) => (hideBalances ? MASK : fmt(n))
+  const canTransfer = data.accounts.length > 1
+  const accCount = data.accounts.length
 
   return (
     <div className="page-enter">
-      <div className="page-header">
+      <div className="page-header page-header--dash">
         <div>
           <h1 className="page-title">Dashboard</h1>
           <p className="page-sub">Your financial overview</p>
         </div>
-        <button className="btn-primary" onClick={onAddExpense}>
-          <Icon name="plus" size={16} /> Add Expense
+      </div>
+
+      {/* Hero: frosted glass card over the neon background glows */}
+      <section className="hero-card">
+        <span className="hero-card__watermark" aria-hidden="true">₱</span>
+        <div className="hero-card__top">
+          <span className="hero-card__seal">₱</span>
+          <div className="hero-card__title">Total balance</div>
+        </div>
+
+        <div className="hero-card__amount-row">
+          <span className={`hero-card__amount${hideBalances ? ' is-hidden' : ''}`}>{money(total)}</span>
+          <button
+            className="hero-card__eye"
+            onClick={onToggleHide}
+            aria-label={hideBalances ? 'Show balances' : 'Hide balances'}
+            aria-pressed={hideBalances}
+          >
+            <Icon name={hideBalances ? 'eyeOff' : 'eye'} size={20} />
+          </button>
+        </div>
+      </section>
+
+      {/* Quick actions */}
+      <div className="quick-actions">
+        <button className="quick-action" onClick={onAddExpense}>
+          <span className="quick-action__circle"><Icon name="plus" size={26} /></span>
+          <span className="quick-action__label">Add Expense</span>
+        </button>
+        <button className="quick-action" onClick={onTransfer} disabled={!canTransfer}
+          title={canTransfer ? undefined : 'Add a second account to transfer'}>
+          <span className="quick-action__circle"><Icon name="transfer" size={24} /></span>
+          <span className="quick-action__label">Transfer</span>
+        </button>
+        <button className="quick-action" onClick={onAddAccount}>
+          <span className="quick-action__circle"><Icon name="wallet" size={24} /></span>
+          <span className="quick-action__label">Add Account</span>
         </button>
       </div>
 
-      {/* Hero */}
-      <div className="hero-card">
-        <div className="hero-card__label">Total Balance</div>
-        <div className="hero-card__amount">{fmt(total)}</div>
-        <div className="hero-card__meta">
-          This week: <strong style={{ color: 'var(--red)' }}>{fmt(wkTotal)}</strong>
-          <span className="dot">·</span>
-          All-time: <strong style={{ color: 'var(--red)' }}>{fmt(totalSpent)}</strong>
-        </div>
-      </div>
-
-      {/* Accounts */}
+      {/* Accounts — one ledger card, a row per account */}
       <div className="section-header">
         <h2 className="section-title">Accounts</h2>
-        <div className="section-actions">
-          {data.accounts.length > 1 && (
-            <button className="btn-outline-green" onClick={onTransfer}>
-              <Icon name="transfer" size={13} /> Transfer
-            </button>
-          )}
-          <button className="btn-outline-green" onClick={onAddAccount}>
-            <Icon name="plus" size={13} /> Add Account
-          </button>
-        </div>
+        {accCount > 0 && <span className="section-count">{accCount}</span>}
       </div>
 
-      {data.accounts.length === 0 ? (
+      {accCount === 0 ? (
         <div className="empty-card">
           <div className="empty-card__icon">🏦</div>
           <p>No accounts yet. Add one to get started!</p>
         </div>
       ) : (
-        <div className="accounts-grid">
-          {data.accounts.map((acc) => (
-            <AccountCard key={acc.id} acc={acc} onEdit={onEditAccount} onDelete={onDeleteAccount} />
-          ))}
+        <div className="account-list">
+          {data.accounts.map((acc) => {
+            const share = total > 0 ? Math.max(0, Math.min(1, acc.balance / total)) : 0
+            return (
+              <button
+                key={acc.id}
+                className="account-row"
+                style={{ '--acc-color': acc.color }}
+                onClick={() => onOpenAccount(acc)}
+              >
+                <span className="account-row__icon">{acc.icon}</span>
+                <span className="account-row__info">
+                  <span className="account-row__name">{acc.name}</span>
+                  {!hideBalances && (
+                    <span className="account-row__share">
+                      <span className="account-row__share-bar">
+                        <span style={{ width: `${share * 100}%` }} />
+                      </span>
+                      {Math.round(share * 100)}%
+                    </span>
+                  )}
+                </span>
+                <span className="account-row__balance">{money(acc.balance)}</span>
+                <Icon name="arrowRight" size={18} className="account-row__arrow" />
+              </button>
+            )
+          })}
         </div>
       )}
 
       {/* Spending by category */}
       {catTotals.length > 0 && (
         <div className="card">
-          <h3 className="card-title">Spending by Category</h3>
+          <div className="card-header">
+            <h3 className="card-title">Spending by Category</h3>
+            <span className="card-header__meta">{monthLabel(thisMonth, { month: 'long' })} · {money(monthSpent)}</span>
+          </div>
           <div className="cat-list">
             {catTotals.map(([cat, amt]) => {
-              const pct = totalSpent > 0 ? (amt / totalSpent) * 100 : 0
+              const pct = monthSpent > 0 ? (amt / monthSpent) * 100 : 0
               return (
                 <div key={cat} className="cat-item">
                   <div className="cat-item__header">
                     <span>{CAT_ICONS[cat] || '📦'} {cat}</span>
-                    <span className="cat-item__amt">{fmt(amt)}</span>
+                    <span className="cat-item__amt">{money(amt)}</span>
                   </div>
                   <div className="bar-track">
                     <div className="bar-fill" style={{ width: `${pct}%` }} />
@@ -88,27 +141,6 @@ export function Dashboard({ data, total, wkTotal, onAddAccount, onEditAccount, o
           </div>
         </div>
       )}
-    </div>
-  )
-}
-
-function AccountCard({ acc, onEdit, onDelete }) {
-  return (
-    <div className="account-card" style={{ '--acc-color': acc.color }}>
-      <div className="account-card__top">
-        <span className="account-card__icon">{acc.icon}</span>
-        <div className="account-card__actions">
-          <button className="icon-btn" onClick={() => onEdit(acc)} title="Edit">
-            <Icon name="edit" size={13} />
-          </button>
-          <button className="icon-btn icon-btn--danger" onClick={() => onDelete(acc.id)} title="Delete">
-            <Icon name="trash" size={13} />
-          </button>
-        </div>
-      </div>
-      <div className="account-card__balance">{fmt(acc.balance)}</div>
-      <div className="account-card__name">{acc.name}</div>
-      <div className="account-card__bar" />
     </div>
   )
 }

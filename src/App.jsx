@@ -2,63 +2,38 @@ import { useState, useMemo, useCallback } from 'react'
 import { Layout }         from './components/Layout'
 import { AccountModal }   from './components/AccountModal'
 import { ExpenseModal }   from './components/ExpenseModal'
-import { AllowanceModal } from './components/AllowanceModal'
 import { TransferModal }  from './components/TransferModal'
 import { ConfirmModal }   from './components/ConfirmModal'
+import { AccountDetailModal } from './components/AccountDetailModal'
 import { Toast }          from './components/Toast'
 import { Dashboard }      from './pages/Dashboard'
 import { Expenses }       from './pages/Expenses'
-import { Weekly }         from './pages/Weekly'
+import { Settings }       from './pages/Settings'
 import { useBudget }      from './hooks/useBudget'
-import { uid, exportJSON, getWeekKey, weekLabel, todayStr } from './utils/helpers'
+import { useSettings }    from './hooks/useSettings'
+import { INIT_DATA }      from './utils/constants'
+import { uid, exportJSON, todayStr, normColor } from './utils/helpers'
 
 export default function App() {
   const { data, update, syncStatus } = useBudget()
+  const { settings, setSetting }     = useSettings()
 
-  const [page, setPage]       = useState('expenses')
-  const [selWeek, setSelWeek] = useState(() => getWeekKey(todayStr()))
+  const [page, setPage] = useState('dashboard')
 
   // Modal visibility
   const [showAddAcc,    setShowAddAcc]    = useState(false)
   const [editAccData,   setEditAccData]   = useState(null)
+  const [viewAccId,     setViewAccId]     = useState(null)   // id, so the sheet reflects live balance
   const [showAddExp,    setShowAddExp]    = useState(false)
   const [editExpData,   setEditExpData]   = useState(null)
   const [showTransfer,  setShowTransfer]  = useState(false)
-  const [showAllowance, setShowAllowance] = useState(false)
   const [confirm,       setConfirm]       = useState(null)
   const [toast,         setToast]         = useState(null)
 
   const dismissToast = useCallback(() => setToast(null), [])
 
   // Derived values
-  const total   = useMemo(() => data.accounts.reduce((s, a) => s + a.balance, 0), [data.accounts])
-  const wkExp   = useMemo(() => data.expenses.filter((e) => getWeekKey(e.date) === selWeek), [data.expenses, selWeek])
-  const wkTotal = useMemo(() => wkExp.reduce((s, e) => s + e.amount, 0), [wkExp])
-  const wkAllow = data.weeks[selWeek]?.allowance ?? 0
-  const wkRem   = wkAllow - wkTotal
-
-  // Always the real current week, regardless of which week is selected on the Weekly page
-  const thisWeekTotal = useMemo(() => {
-    const key = getWeekKey(todayStr())
-    return data.expenses.reduce((s, e) => (getWeekKey(e.date) === key ? s + e.amount : s), 0)
-  }, [data.expenses])
-
-  const allWeeks = useMemo(() => {
-    const keys = new Set(data.expenses.map((e) => getWeekKey(e.date)))
-    Object.keys(data.weeks).forEach((k) => keys.add(k))
-    keys.add(getWeekKey(todayStr()))
-    return [...keys].sort().reverse()
-  }, [data.expenses, data.weeks])
-
-  // Most recent earlier week with an allowance — prefill suggestion when this week has none
-  const prevAllowance = useMemo(() => {
-    const prev = Object.keys(data.weeks)
-      .filter((k) => k < selWeek && data.weeks[k]?.allowance > 0)
-      .sort()
-      .pop()
-    return prev ? data.weeks[prev].allowance : 0
-  }, [data.weeks, selWeek])
-
+  const total = useMemo(() => data.accounts.reduce((s, a) => s + a.balance, 0), [data.accounts])
   // ── Accounts ─────────────────────────────────────────────────────────────
   const addAccount = (form) => {
     update((prev) => ({
@@ -67,7 +42,7 @@ export default function App() {
         id:      uid(),
         name:    form.name.trim(),
         icon:    form.icon || '💰',
-        color:   form.color || '#16a34a',
+        color:   normColor(form.color),
         balance: parseFloat(form.balance) || 0,
       }],
     }))
@@ -79,7 +54,7 @@ export default function App() {
       ...prev,
       accounts: prev.accounts.map((a) =>
         a.id === editAccData.id
-          ? { ...a, name: form.name.trim(), icon: form.icon, color: form.color, balance: parseFloat(form.balance) || 0 }
+          ? { ...a, name: form.name.trim(), icon: form.icon, color: normColor(form.color), balance: parseFloat(form.balance) || 0 }
           : a
       ),
     }))
@@ -131,34 +106,47 @@ export default function App() {
     setShowAddExp(false)
   }
 
-  // Refund the old amount/account and deduct the new — one update so balances stay consistent
+  // Refund the old amount/account and deduct the new — one update so balances stay consistent.
+  // The refund reads the expense from `prev`, not the editExpData snapshot: a realtime update
+  // may have changed it while the sheet was open.
   const saveExpense = (form) => {
-    const old = editExpData
-    update((prev) => ({
-      ...prev,
-      expenses: prev.expenses.map((e) =>
-        e.id === old.id
-          ? { ...e, description: form.description.trim(), amount: form.amount, category: form.category, accountId: form.accountId, date: form.date }
-          : e
-      ),
-      accounts: prev.accounts.map((a) => {
-        let bal = a.balance
-        if (a.id === old.accountId)  bal += old.amount
-        if (a.id === form.accountId) bal -= form.amount
-        return bal === a.balance ? a : { ...a, balance: bal }
-      }),
-    }))
+    const id = editExpData.id
+    update((prev) => {
+      const old = prev.expenses.find((e) => e.id === id)
+      if (!old) return prev   // deleted elsewhere meanwhile
+      return {
+        ...prev,
+        expenses: prev.expenses.map((e) =>
+          e.id === id
+            ? { ...e, description: form.description.trim(), amount: form.amount, category: form.category, accountId: form.accountId, date: form.date }
+            : e
+        ),
+        accounts: prev.accounts.map((a) => {
+          let bal = a.balance
+          if (a.id === old.accountId)  bal += old.amount
+          if (a.id === form.accountId) bal -= form.amount
+          return bal === a.balance ? a : { ...a, balance: bal }
+        }),
+      }
+    })
     setEditExpData(null)
   }
 
-  const deleteExpense = (exp) => {
-    update((prev) => ({
-      ...prev,
-      expenses: prev.expenses.filter((e) => e.id !== exp.id),
-      accounts: prev.accounts.map((a) =>
-        a.id === exp.accountId ? { ...a, balance: a.balance + exp.amount } : a
-      ),
-    }))
+  const deleteExpense = (id) => {
+    // Current version (not a stale snapshot), so the refund and the undo use the live amount
+    const exp = data.expenses.find((e) => e.id === id)
+    if (!exp) return
+    update((prev) => {
+      const cur = prev.expenses.find((e) => e.id === id)
+      if (!cur) return prev
+      return {
+        ...prev,
+        expenses: prev.expenses.filter((e) => e.id !== id),
+        accounts: prev.accounts.map((a) =>
+          a.id === cur.accountId ? { ...a, balance: a.balance + cur.amount } : a
+        ),
+      }
+    })
     setToast({
       message: `Deleted "${exp.description || exp.category}"`,
       actionLabel: 'Undo',
@@ -173,18 +161,7 @@ export default function App() {
     })
   }
 
-  // ── Allowance / data ─────────────────────────────────────────────────────
-  const setAllowance = (amt) => {
-    update((prev) => ({
-      ...prev,
-      weeks: {
-        ...prev.weeks,
-        [selWeek]: { ...prev.weeks[selWeek], allowance: parseFloat(amt) || 0 },
-      },
-    }))
-    setShowAllowance(false)
-  }
-
+  // ── Data ─────────────────────────────────────────────────────────────────
   const handleImport = (e) => {
     const file = e.target.files[0]
     if (!file) return
@@ -214,25 +191,36 @@ export default function App() {
     e.target.value = ''
   }
 
+  const resetData = () => {
+    setConfirm({
+      title: 'Reset All Data',
+      message: `Delete all ${data.expenses.length} expenses and restore the default accounts with zero balances? This cannot be undone. Export a backup first if you might need it.`,
+      confirmLabel: 'Reset Everything',
+      danger: true,
+      onConfirm: () => {
+        update(() => INIT_DATA)
+        setToast({ message: 'All data reset' })
+      },
+    })
+  }
+
   return (
     <>
       <Layout
         page={page}
         setPage={setPage}
-        onExport={() => exportJSON(data)}
-        onImport={handleImport}
         syncStatus={syncStatus}
       >
         {page === 'dashboard' && (
           <Dashboard
             data={data}
             total={total}
-            wkTotal={thisWeekTotal}
-            onAddAccount={() => setShowAddAcc(true)}
-            onEditAccount={setEditAccData}
-            onDeleteAccount={deleteAccount}
+            hideBalances={settings.hideBalances}
+            onToggleHide={() => setSetting('hideBalances', !settings.hideBalances)}
             onAddExpense={() => setShowAddExp(true)}
             onTransfer={() => setShowTransfer(true)}
+            onAddAccount={() => setShowAddAcc(true)}
+            onOpenAccount={(acc) => setViewAccId(acc.id)}
           />
         )}
         {page === 'expenses' && (
@@ -240,36 +228,42 @@ export default function App() {
             data={data}
             onAddExpense={() => setShowAddExp(true)}
             onEditExpense={setEditExpData}
-            onDeleteExpense={deleteExpense}
           />
         )}
-        {page === 'weekly' && (
-          <Weekly
-            selWeek={selWeek}
-            setSelWeek={setSelWeek}
-            wkTotal={wkTotal}
-            wkAllow={wkAllow}
-            wkRem={wkRem}
-            allWeeks={allWeeks}
-            onAddExpense={() => setShowAddExp(true)}
-            onSetAllowance={() => setShowAllowance(true)}
-            onViewExpenses={() => setPage('expenses')}
+        {page === 'settings' && (
+          <Settings
+            settings={settings}
+            setSetting={setSetting}
+            data={data}
+            syncStatus={syncStatus}
+            onExport={() => exportJSON(data)}
+            onImport={handleImport}
+            onReset={resetData}
           />
         )}
       </Layout>
 
+      <AccountDetailModal
+        account={data.accounts.find((a) => a.id === viewAccId) || null}
+        expenses={data.expenses}
+        hideBalances={settings.hideBalances}
+        onClose={() => setViewAccId(null)}
+        onEdit={(acc) => { setViewAccId(null); setEditAccData(acc) }}
+        onDelete={(id) => { setViewAccId(null); deleteAccount(id) }}
+      />
       <AccountModal open={showAddAcc}    onClose={() => setShowAddAcc(false)} onSave={addAccount}  title="Add Account" />
       <AccountModal open={!!editAccData} onClose={() => setEditAccData(null)} onSave={saveAccount} title="Edit Account" initial={editAccData} />
-      <ExpenseModal open={showAddExp}    onClose={() => setShowAddExp(false)} accounts={data.accounts} onSave={addExpense} />
-      <ExpenseModal open={!!editExpData} onClose={() => setEditExpData(null)} accounts={data.accounts} onSave={saveExpense} initial={editExpData} />
-      <TransferModal open={showTransfer} onClose={() => setShowTransfer(false)} accounts={data.accounts} onSave={transfer} />
-      <AllowanceModal
-        open={showAllowance}
-        onClose={() => setShowAllowance(false)}
-        label={weekLabel(selWeek)}
-        current={wkAllow || prevAllowance}
-        onSave={setAllowance}
+      <ExpenseModal open={showAddExp}    onClose={() => setShowAddExp(false)} accounts={data.accounts} hideBalances={settings.hideBalances} onSave={addExpense} />
+      <ExpenseModal
+        open={!!editExpData}
+        onClose={() => setEditExpData(null)}
+        accounts={data.accounts}
+        hideBalances={settings.hideBalances}
+        onSave={saveExpense}
+        onDelete={(exp) => { setEditExpData(null); deleteExpense(exp.id) }}
+        initial={editExpData}
       />
+      <TransferModal open={showTransfer} onClose={() => setShowTransfer(false)} accounts={data.accounts} onSave={transfer} />
       <ConfirmModal confirm={confirm} onClose={() => setConfirm(null)} />
       <Toast toast={toast} onDismiss={dismissToast} />
     </>
