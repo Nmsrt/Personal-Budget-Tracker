@@ -1,4 +1,4 @@
-import { ACCOUNT_TYPES } from './constants'
+import { ACCOUNT_TYPES, DEFAULT_ACCOUNTS } from './constants'
 
 export const fmt = (n) =>
   new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(n ?? 0)
@@ -62,12 +62,18 @@ export const exportJSON = (data) => {
 const TYPE_IDS = ACCOUNT_TYPES.map((t) => t.id)
 export const accType = (acc) => {
   if (TYPE_IDS.includes(acc.type)) return acc.type
-  const n = `${acc.id} ${acc.name}`.toLowerCase()
+  // Built-in accounts keep fixed ids; everything else has a random uid(), so only the name is matched
+  const builtin = DEFAULT_ACCOUNTS.find((d) => d.id === acc.id)
+  if (builtin) return builtin.type
+  const n = String(acc.name ?? '').toLowerCase()
   if (/gcash|maya|maribank|seabank|gotyme|tonik|cimb|grabpay|shopeepay|coins\.ph|wallet/.test(n)) return 'wallet'
   if (/\bcash\b|on-?hand|storage|ipon|alkansya|piggy/.test(n)) return 'cash'
   if (/bank|bdo|bpi|metrobank|landbank|pnb|rcbc|chinabank|eastwest/.test(n)) return 'bank'
   return 'wallet'
 }
+
+// Sum of account balances; non-numeric balances (e.g. from a bad import) count as 0
+export const sumBalances = (accounts) => accounts.reduce((s, a) => s + (Number(a.balance) || 0), 0)
 
 // Accounts of one type, highest balance first (ties keep stored order)
 export const accountsOfType = (accounts, type) =>

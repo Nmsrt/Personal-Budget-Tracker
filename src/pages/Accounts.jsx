@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { Icon } from '../components/Icon'
 import { AccountList } from '../components/AccountList'
 import { ACCOUNT_TYPES } from '../utils/constants'
-import { fmt, MASK, accountsOfType } from '../utils/helpers'
+import { fmt, MASK, accountsOfType, sumBalances } from '../utils/helpers'
 
 // Every account, grouped by type: Physical Cash, Traditional Bank, Digital Wallet.
 export function Accounts({ data, total, hideBalances, onAddAccount, onOpenAccount }) {
@@ -11,7 +11,7 @@ export function Accounts({ data, total, hideBalances, onAddAccount, onOpenAccoun
       ACCOUNT_TYPES
         .map((t) => {
           const accounts = accountsOfType(data.accounts, t.id)
-          return { ...t, accounts, sum: accounts.reduce((s, a) => s + a.balance, 0) }
+          return { ...t, accounts, sum: sumBalances(accounts) }
         })
         .filter((g) => g.accounts.length > 0),
     [data.accounts]

@@ -2,7 +2,8 @@ import { Icon } from './Icon'
 import { fmt, MASK } from '../utils/helpers'
 
 // Ledger card with a row per account; tapping a row opens AccountDetailModal.
-// `total` is the base for each row's share bar.
+// `total` is the base for each row's share bar: always the overall balance, so a row reads the
+// same percentage on the Dashboard and the Accounts page.
 export function AccountList({ accounts, total, hideBalances, onOpenAccount }) {
   return (
     <div className="account-list">

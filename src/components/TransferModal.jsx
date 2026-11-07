@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Modal } from './Modal'
 import { ACCOUNT_TYPES } from '../utils/constants'
-import { fmt, accountsOfType } from '../utils/helpers'
+import { fmt, MASK, accountsOfType } from '../utils/helpers'
 
 const blank = (accounts) => ({
   fromId: accounts[0]?.id || '',
@@ -9,7 +9,7 @@ const blank = (accounts) => ({
   amount: '',
 })
 
-export function TransferModal({ open, onClose, accounts, onSave }) {
+export function TransferModal({ open, onClose, accounts, hideBalances, onSave }) {
   const [form, setForm] = useState(() => blank(accounts))
   const [error, setError] = useState('')
 
@@ -22,6 +22,7 @@ export function TransferModal({ open, onClose, accounts, onSave }) {
 
   const set = (k) => (e) => setForm((p) => ({ ...p, [k]: e.target.value }))
   const from = accounts.find((a) => a.id === form.fromId)
+  const money = (n) => (hideBalances ? MASK : fmt(n))
 
   // Same grouped option list for From and To
   const options = ACCOUNT_TYPES.map((t) => {
@@ -29,7 +30,7 @@ export function TransferModal({ open, onClose, accounts, onSave }) {
     return group.length === 0 ? null : (
       <optgroup key={t.id} label={t.label}>
         {group.map((a) => (
-          <option key={a.id} value={a.id}>{a.icon} {a.name} — {fmt(a.balance)}</option>
+          <option key={a.id} value={a.id}>{a.icon} {a.name} — {money(a.balance)}</option>
         ))}
       </optgroup>
     )
@@ -40,7 +41,7 @@ export function TransferModal({ open, onClose, accounts, onSave }) {
     const amt = parseFloat(form.amount)
     if (!amt || amt <= 0) return setError('Enter an amount greater than zero.')
     if (form.fromId === form.toId) return setError('Pick two different accounts.')
-    if (from && amt > from.balance) return setError(`Only ${fmt(from.balance)} available in ${from.name}.`)
+    if (from && amt > from.balance) return setError(hideBalances ? `Not enough in ${from.name}.` : `Only ${fmt(from.balance)} available in ${from.name}.`)
     onSave({ fromId: form.fromId, toId: form.toId, amount: amt })
   }
 

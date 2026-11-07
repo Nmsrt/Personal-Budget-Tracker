@@ -28,7 +28,6 @@ export function Dashboard({
   const canTransfer = data.accounts.length > 1
   const accCount = data.accounts.length
   const cashAccounts = useMemo(() => accountsOfType(data.accounts, 'cash'), [data.accounts])
-  const cashTotal = cashAccounts.reduce((s, a) => s + a.balance, 0)
 
   return (
     <div className="page-enter">
@@ -91,7 +90,7 @@ export function Dashboard({
           <p>No physical cash accounts yet. Add one and set its type to Physical Cash.</p>
         </div>
       ) : (
-        <AccountList accounts={cashAccounts} total={cashTotal} hideBalances={hideBalances} onOpenAccount={onOpenAccount} />
+        <AccountList accounts={cashAccounts} total={total} hideBalances={hideBalances} onOpenAccount={onOpenAccount} />
       )}
 
       {/* Spending by category */}

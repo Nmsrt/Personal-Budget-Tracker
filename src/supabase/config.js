@@ -30,15 +30,19 @@ export const saveToSupabase = async (data) => {
 }
 
 /**
- * Read the budget row once, then subscribe to realtime changes.
- * @param {(data:object)=>void} onData   — called when data exists (initial read + every remote change)
- * @param {()=>void}            onEmpty  — called when the row doesn't exist yet (first run)
- * @param {(err:Error)=>void}   onError  — called on policy / network errors
+ * Read the budget row once, then subscribe to realtime changes. The read and the realtime stream
+ * report through separate callbacks so the caller can tell the initial snapshot from live updates.
+ * @param {object} h
+ * @param {(data:object|null)=>void} h.onRead      — initial read finished; null when the row doesn't exist yet
+ * @param {(err:Error)=>void}        h.onReadError — initial read failed (bad policy, network down, etc.)
+ * @param {(data:object)=>void}      h.onChange    — realtime change to the row (including echoes of our own writes)
+ * @param {(ok:boolean)=>void}       h.onStatus    — realtime channel joined (true) or errored / timed out (false);
+ *                                                   supabase-js rejoins on its own, so true can follow false
  * @returns {()=>void} unsubscribe
  */
-export const subscribeToSupabase = (onData, onEmpty, onError) => {
+export const subscribeToSupabase = ({ onRead, onReadError, onChange, onStatus }) => {
   if (!supabase) {
-    onError?.(new Error('Supabase not initialised'))
+    onReadError(new Error('Supabase not initialised'))
     return () => {}
   }
 
@@ -49,12 +53,14 @@ export const subscribeToSupabase = (onData, onEmpty, onError) => {
     .select('data')
     .eq('id', ROW_ID)
     .maybeSingle()
-    .then(({ data: row, error }) => {
-      if (cancelled) return
-      if (error) return onError?.(new Error(error.message))
-      if (row?.data) onData(row.data)
-      else onEmpty?.()
-    })
+    .then(
+      ({ data: row, error }) => {
+        if (cancelled) return
+        if (error) onReadError(new Error(error.message))
+        else onRead(row?.data ?? null)
+      },
+      (err) => { if (!cancelled) onReadError(err) }
+    )
 
   const channel = supabase
     // Unique topic per subscription: reconnecting creates a new channel while the old one is still closing
@@ -63,12 +69,15 @@ export const subscribeToSupabase = (onData, onEmpty, onError) => {
       'postgres_changes',
       { event: '*', schema: 'public', table: 'budget', filter: `id=eq.${ROW_ID}` },
       (payload) => {
-        if (!cancelled && payload.new?.data) onData(payload.new.data)
+        if (!cancelled && payload.new?.data) onChange(payload.new.data)
       }
     )
     .subscribe((status, err) => {
-      if ((status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') && !cancelled) {
-        onError?.(err || new Error('Realtime channel error'))
+      if (cancelled) return
+      if (status === 'SUBSCRIBED') onStatus(true)
+      else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        console.warn('[Supabase] Realtime', status, err?.message || '')
+        onStatus(false)
       }
     })
 

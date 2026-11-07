@@ -3,110 +3,132 @@ import { hasSupabaseConfig, saveToSupabase, subscribeToSupabase } from '../supab
 import { INIT_DATA } from '../utils/constants'
 
 const LOCAL_KEY = 'budgetapp_v3'
+// Set while local changes haven't been confirmed by Supabase; kept in localStorage so a reload
+// (or closing the PWA while offline) doesn't forget them and let the next read overwrite them.
+const DIRTY_KEY = 'budgetapp_dirty'
 
 const loadLocal = () => {
   try { return JSON.parse(localStorage.getItem(LOCAL_KEY)) } catch { return null }
 }
-const saveLocal = (d) => localStorage.setItem(LOCAL_KEY, JSON.stringify(d))
+const saveLocal = (d) => {
+  try { localStorage.setItem(LOCAL_KEY, JSON.stringify(d)) } catch { /* storage full / blocked */ }
+}
+const loadDirty = () => {
+  try { return localStorage.getItem(DIRTY_KEY) === '1' } catch { return false }
+}
+const saveDirty = (v) => {
+  try { v ? localStorage.setItem(DIRTY_KEY, '1') : localStorage.removeItem(DIRTY_KEY) } catch { /* ignore */ }
+}
 
 export function useBudget() {
   const [data, setData]     = useState(() => loadLocal() || INIT_DATA)
-  const [synced, setSynced] = useState(false)
   const [online, setOnline] = useState(false)
   // Bumped by reconnect() to tear down and redo the Supabase read + realtime subscription
   const [connId, setConnId] = useState(0)
   const [reconnecting, setReconnecting] = useState(false)
-  // Prevents echoing Supabase's own updates back to Supabase
-  const skipNextWrite = useRef(false)
-  // Local changes that failed to reach Supabase; on reconnect they're pushed instead of overwritten
-  const dirty     = useRef(false)
-  const syncedRef = useRef(false)
-  const dataRef   = useRef(data)
+
+  // The object last saved locally or received from Supabase. The persist effect skips it, so remote
+  // updates aren't echoed back to Supabase and the mount run isn't treated as an edit.
+  const persisted = useRef(data)
+  // An initial Supabase read has succeeded. Until then edits stay local and are marked dirty;
+  // nothing is written to Supabase before we've seen what's there.
+  const remoteReady = useRef(false)
+  // Unconfirmed local changes. While set, incoming remote data never replaces local data — local is pushed instead.
+  const dirty = useRef(loadDirty())
+  const setDirty = useCallback((v) => { dirty.current = v; saveDirty(v) }, [])
+  // Only the newest save may settle dirty/online; inflight > 0 means one of our saves is pending
+  const saveSeq  = useRef(0)
+  const inflight = useRef(0)
+  const dataRef  = useRef(data)
   dataRef.current = data
 
   const pushLocal = useCallback(() => {
+    const seq = ++saveSeq.current
+    inflight.current++
+    setDirty(true)   // until this save is confirmed, so a reload mid-save still re-pushes
     saveToSupabase(dataRef.current)
-      .then(() => { dirty.current = false; setOnline(true) })
-      .catch((err) => {
-        console.warn('[Supabase] Save error:', err.message)
-        dirty.current = true
-        setOnline(false)
-      })
-  }, [])
+      .then(
+        () => { if (seq === saveSeq.current) { setDirty(false); setOnline(true) } },
+        (err) => {
+          console.warn('[Supabase] Save error:', err.message)
+          if (seq === saveSeq.current) setOnline(false)   // dirty stays set
+        }
+      )
+      .finally(() => { inflight.current-- })
+  }, [setDirty])
 
   // ── Subscribe to Supabase ─────────────────────────────────────────────────
   useEffect(() => {
     if (!hasSupabaseConfig) {
-      // No Supabase — just use localStorage, mark as ready immediately
-      syncedRef.current = true
-      setSynced(true)
+      // No Supabase — localStorage only
       setOnline(false)
       return
     }
 
-    let initial = true   // the first onData is the initial read; later ones are realtime events
-    const done = () => {
-      initial = false
-      syncedRef.current = true
-      setSynced(true)
+    // Per connection: has the initial snapshot (read, or an earlier realtime change) been handled?
+    let readDone = false
+    const finishRead = () => {
+      readDone = true
+      remoteReady.current = true
+      setReconnecting(false)
+    }
+    const readFailed = () => {
+      setOnline(false)
       setReconnecting(false)
     }
 
-    const unsub = subscribeToSupabase(
-      // Remote data received — update local state
-      (remoteData) => {
-        if (initial && dirty.current) {
-          // Reconnecting with unsynced local edits: keep them and push them up
-          done()
-          pushLocal()
-          return
-        }
-        if (initial) done()
-        skipNextWrite.current = true
-        setData(remoteData)
-        saveLocal(remoteData)
-        setOnline(true)
-      },
-      // Row is empty (fresh database) — push local data up
-      () => {
-        const wasSynced = syncedRef.current
-        done()
-        setOnline(true)
-        // First load: the persist effect pushes local → Supabase once `synced` flips.
-        // On reconnect `synced` is already true, so push explicitly.
-        if (wasSynced) pushLocal()
-      },
-      // Error (bad policy, network down, etc.)
-      (err) => {
-        console.warn('[Supabase] Subscribe error:', err.message)
-        done()            // unblock so localStorage still saves
-        setOnline(false)
-      }
-    )
+    const receive = (remote) => {
+      if (inflight.current > 0) return     // our pending save supersedes it (and this may be its echo)
+      if (dirty.current) return pushLocal() // keep unsynced local edits and upload them
+      persisted.current = remote
+      saveLocal(remote)
+      setData(remote)
+      setOnline(true)
+    }
 
-    // Don't leave the Reconnect button spinning if the read never answers
-    const timer = setTimeout(() => { if (initial) { done(); setOnline(false) } }, 15000)
+    const unsub = subscribeToSupabase({
+      onRead: (remote) => {
+        if (readDone) return   // a realtime change already arrived, and it's newer than this snapshot
+        finishRead()
+        if (remote === null) pushLocal()   // fresh database: seed it with local data
+        else receive(remote)
+      },
+      onReadError: (err) => {
+        console.warn('[Supabase] Read error:', err.message)
+        if (!readDone) readFailed()
+      },
+      onChange: (remote) => {
+        if (!readDone) finishRead()
+        receive(remote)
+      },
+      onStatus: (ok) => {
+        if (!ok) return setOnline(false)
+        if (!readDone) return   // the initial read decides
+        // Channel (re)joined: upload anything that failed while it was down, else we're back online
+        if (dirty.current) { if (inflight.current === 0) pushLocal() }
+        else setOnline(true)
+      },
+    })
+
+    // Don't leave the Reconnect button spinning if the read never answers. Only the UI is unblocked:
+    // Supabase writes still wait for a successful read, and a late read is handled normally.
+    const timer = setTimeout(() => { if (!readDone) readFailed() }, 15000)
 
     return () => { clearTimeout(timer); unsub() }
   }, [connId, pushLocal])
 
   // ── Persist on every data change ─────────────────────────────────────────
   useEffect(() => {
-    // Wait until we've done the initial Supabase read / check
-    if (!synced) return
-
-    // This update came from Supabase — don't echo it back
-    if (skipNextWrite.current) {
-      skipNextWrite.current = false
-      return
-    }
+    if (data === persisted.current) return   // unchanged, or it came from Supabase
+    persisted.current = data
 
     // Always save locally first (instant, safe)
     saveLocal(data)
+    if (!hasSupabaseConfig) return
 
-    // Then try Supabase if configured
-    if (hasSupabaseConfig) pushLocal()
-  }, [data, synced]) // eslint-disable-line react-hooks/exhaustive-deps
+    if (remoteReady.current) pushLocal()
+    else setDirty(true)   // pushed once the initial read succeeds
+  }, [data, pushLocal, setDirty])
 
   const update = useCallback((fn) => setData((prev) => fn(prev)), [])
 
@@ -118,5 +140,5 @@ export function useBudget() {
 
   const syncStatus = online ? 'online' : 'offline'
 
-  return { data, update, synced, syncStatus, reconnect, reconnecting }
+  return { data, update, syncStatus, reconnect, reconnecting }
 }

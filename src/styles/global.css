@@ -55,7 +55,6 @@
   /* Background: neon mint / cyan / lime glows at the top, behind the glass hero. --bg-top must match
      THEME_COLOR in src/hooks/useSettings.js (status bar color). */
   --bg-top:       #d4f5e6;
-  --status-scrim: rgba(6, 36, 22, 0.34);   /* behind iOS's white status-bar text in the installed PWA */
   --bg-gradient:  radial-gradient(90% 60% at 0% 0%, rgba(46, 240, 154, 0.38) 0%, rgba(46, 240, 154, 0) 60%), radial-gradient(80% 55% at 100% 4%, rgba(56, 214, 255, 0.32) 0%, rgba(56, 214, 255, 0) 62%), radial-gradient(60% 40% at 55% 28%, rgba(190, 255, 90, 0.18) 0%, rgba(190, 255, 90, 0) 70%);
   --glass:        rgba(255, 255, 255, 0.5);
   --glass-line:   rgba(255, 255, 255, 0.85);
@@ -126,7 +125,6 @@
     --backdrop:     rgba(0, 0, 0, 0.6);
     --acc-text-mix: 55%;
     --bg-top:       #10241b;
-  --status-scrim: rgba(0, 0, 0, 0);
     --bg-gradient:  radial-gradient(90% 60% at 0% 0%, rgba(46, 240, 154, 0.2) 0%, rgba(46, 240, 154, 0) 60%), radial-gradient(80% 55% at 100% 4%, rgba(56, 214, 255, 0.15) 0%, rgba(56, 214, 255, 0) 62%), radial-gradient(60% 40% at 55% 28%, rgba(190, 255, 90, 0.07) 0%, rgba(190, 255, 90, 0) 70%);
     --glass:        rgba(255, 255, 255, 0.06);
     --glass-line:   rgba(255, 255, 255, 0.13);
@@ -171,7 +169,6 @@
   --backdrop:     rgba(0, 0, 0, 0.6);
   --acc-text-mix: 55%;
   --bg-top:       #10241b;
-  --status-scrim: rgba(0, 0, 0, 0);
   --bg-gradient:  radial-gradient(90% 60% at 0% 0%, rgba(46, 240, 154, 0.2) 0%, rgba(46, 240, 154, 0) 60%), radial-gradient(80% 55% at 100% 4%, rgba(56, 214, 255, 0.15) 0%, rgba(56, 214, 255, 0) 62%), radial-gradient(60% 40% at 55% 28%, rgba(190, 255, 90, 0.07) 0%, rgba(190, 255, 90, 0) 70%);
   --glass:        rgba(255, 255, 255, 0.06);
   --glass-line:   rgba(255, 255, 255, 0.13);
@@ -198,8 +195,11 @@ html, body, #root {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Gradient scrolls with the page (iOS ignores background-attachment: fixed);
-   html stays flat paper so overscroll edges match the bottom of the gradient. */
+/* Gradient scrolls with the page (iOS ignores background-attachment: fixed).
+   html (the canvas) is --bg-top, not paper: iOS 26 tints the status-bar edge effect with the
+   page's root background color, so this keeps the top of the screen green instead of fading
+   to white. body paints paper + gradient over it. */
+html { background: var(--bg-top); }
 body {
   background-color: var(--paper);
   background-image: var(--bg-gradient);
@@ -208,20 +208,6 @@ body {
 }
 #root { background: transparent; }
 
-/* Installed iOS PWA uses status-bar style black-translucent, so the gradient runs up behind the
-   status bar / Dynamic Island. iOS then draws white status text; this soft fade keeps it legible
-   on the light theme without a hard edge. */
-@media (display-mode: standalone) {
-  body::before {
-    content: '';
-    position: fixed;
-    top: 0; left: 0; right: 0;
-    height: calc(env(safe-area-inset-top) + 18px);
-    background: linear-gradient(var(--status-scrim), transparent);
-    pointer-events: none;
-    z-index: 90;
-  }
-}
 
 /* Never put overflow on html/body: on iOS that makes body its own scroll box
    and page scrolling can lock up. Horizontal overflow is clipped on .app. */
@@ -1971,24 +1957,64 @@ input[type="date"]::-webkit-calendar-picker-indicator { opacity: 0.4; cursor: po
 /* ═══════════════════════════════════════════════════════════════════════════
    SETTINGS
 ═══════════════════════════════════════════════════════════════════════════ */
-.page-enter:has(.settings-section) { max-width: 720px; }
+.settings-page { max-width: 720px; }
 
-.settings-section { margin-bottom: 26px; }
+/* Accordion category card: header row toggles a body that animates open via grid rows */
+.settings-group { padding: 0; margin-bottom: 12px; overflow: hidden; }
+.settings-group--danger { border-color: var(--spend-line); }
 
-.settings-section__title {
-  font-family: var(--font-mono);
-  font-size: 0.68rem;
-  font-weight: 500;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+.settings-group__head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 16px 20px;
+  background: none;
+  border: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.settings-group__head:hover { background: var(--paper-dim); }
+
+.settings-group__icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 38px; height: 38px;
+  border-radius: 12px;
+  background: var(--brand-tint);
+  color: var(--brand-deep);
+}
+.settings-group--danger .settings-group__icon { background: var(--spend-tint); color: var(--spend); }
+
+.settings-group__text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.settings-group__title { font-family: var(--font-display); font-size: 1rem; font-weight: 600; color: var(--ink); }
+.settings-group--danger .settings-group__title { color: var(--spend); }
+.settings-group__summary {
+  font-size: 0.82rem;
   color: var(--muted);
-  margin: 0 4px 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.settings-section__title--danger { color: var(--spend); }
+.settings-group__chev { flex-shrink: 0; color: var(--muted); transition: transform 0.25s ease; }
+.settings-group.open .settings-group__chev { transform: rotate(180deg); }
 
-.settings-card { padding: 0 20px; }
-.settings-card--danger { border-color: var(--spend-line); }
+.settings-group__body {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.25s ease;
+}
+.settings-group.open .settings-group__body { grid-template-rows: 1fr; }
+.settings-group__inner { min-height: 0; overflow: hidden; padding: 0 20px; }
+.settings-group.open .settings-group__inner { border-top: 1px solid var(--rule); }
+
+@media (prefers-reduced-motion: reduce) {
+  .settings-group__body, .settings-group__chev { transition: none; }
+}
 
 .setting-row {
   display: flex;
@@ -2161,7 +2187,9 @@ select.setting-row__control { width: auto; min-width: 190px; }
   .acc-hero__balance { font-size: 2rem; }
 
   /* Settings rows stack: text on top, full-width control below */
-  .settings-card { padding: 0 14px; }
+  .settings-group { padding: 0; }
+  .settings-group__head { padding: 14px; }
+  .settings-group__inner { padding: 0 14px; }
   .setting-row { flex-direction: column; align-items: stretch; gap: 10px; padding: 14px 0; }
   .setting-row__control, select.setting-row__control { width: 100%; min-width: 0; }
   .setting-row .sync-badge { align-self: flex-start; }

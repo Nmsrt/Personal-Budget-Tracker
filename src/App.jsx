@@ -13,7 +13,7 @@ import { Settings }       from './pages/Settings'
 import { useBudget }      from './hooks/useBudget'
 import { useSettings }    from './hooks/useSettings'
 import { INIT_DATA }      from './utils/constants'
-import { uid, exportJSON, todayStr, normColor } from './utils/helpers'
+import { uid, exportJSON, todayStr, normColor, sumBalances } from './utils/helpers'
 
 export default function App() {
   const { data, update, syncStatus, reconnect, reconnecting } = useBudget()
@@ -34,7 +34,7 @@ export default function App() {
   const dismissToast = useCallback(() => setToast(null), [])
 
   // Derived values
-  const total = useMemo(() => data.accounts.reduce((s, a) => s + a.balance, 0), [data.accounts])
+  const total = useMemo(() => sumBalances(data.accounts), [data.accounts])
   // ── Accounts ─────────────────────────────────────────────────────────────
   const addAccount = (form) => {
     update((prev) => ({
@@ -277,7 +277,7 @@ export default function App() {
         onDelete={(exp) => { setEditExpData(null); deleteExpense(exp.id) }}
         initial={editExpData}
       />
-      <TransferModal open={showTransfer} onClose={() => setShowTransfer(false)} accounts={data.accounts} onSave={transfer} />
+      <TransferModal open={showTransfer} onClose={() => setShowTransfer(false)} accounts={data.accounts} hideBalances={settings.hideBalances} onSave={transfer} />
       <ConfirmModal confirm={confirm} onClose={() => setConfirm(null)} />
       <Toast toast={toast} onDismiss={dismissToast} />
     </>

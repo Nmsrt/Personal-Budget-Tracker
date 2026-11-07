@@ -9,7 +9,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
     <!-- 'black-translucent' lets the page (and its gradient) draw behind the status bar / Dynamic Island;
-         global.css adds a soft top scrim so iOS's white status text stays legible on the light theme -->
+         iOS 26 ignores this and tints the status bar from the html background (--bg-top in global.css) -->
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <!-- Apply saved theme before first paint (key/shape owned by src/hooks/useSettings.js) -->
     <script>
