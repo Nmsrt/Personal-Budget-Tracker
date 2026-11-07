@@ -1,11 +1,23 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Icon } from '../components/Icon'
 import { AccountList } from '../components/AccountList'
 import { ACCOUNT_TYPES } from '../utils/constants'
 import { fmt, MASK, accountsOfType, sumBalances } from '../utils/helpers'
 
 // Every account, grouped by type: Physical Cash, Traditional Bank, Digital Wallet.
-export function Accounts({ data, total, hideBalances, onAddAccount, onOpenAccount }) {
+export function Accounts({ data, total, hideBalances, onAddAccount, onTransfer, onOpenAccount }) {
+  const [menuOpen, setMenuOpen] = useState(false)
+  const canTransfer = data.accounts.length > 1
+
+  useEffect(() => {
+    if (!menuOpen) return
+    const onKey = (e) => { if (e.key === 'Escape') setMenuOpen(false) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [menuOpen])
+
+  const pick = (fn) => () => { setMenuOpen(false); fn() }
+
   const groups = useMemo(
     () =>
       ACCOUNT_TYPES
@@ -22,15 +34,16 @@ export function Accounts({ data, total, hideBalances, onAddAccount, onOpenAccoun
   return (
     <div className="page-enter">
       <div className="page-header">
-        <div>
-          <h1 className="page-title">Accounts</h1>
-          <p className="page-sub">
-            {data.accounts.length} accounts · {money(total)}
-          </p>
+        <h1 className="page-title">Accounts</h1>
+        <div className="page-header__add page-header__actions">
+          <button className="btn-secondary" onClick={onTransfer} disabled={!canTransfer}
+            title={canTransfer ? undefined : 'Add a second account to transfer'}>
+            <Icon name="transfer" size={16} /> Transfer
+          </button>
+          <button className="btn-primary" onClick={onAddAccount}>
+            <Icon name="plus" size={16} /> Add Account
+          </button>
         </div>
-        <button className="btn-primary page-header__add" onClick={onAddAccount}>
-          <Icon name="plus" size={16} /> Add Account
-        </button>
       </div>
 
       {groups.length === 0 ? (
@@ -52,8 +65,21 @@ export function Accounts({ data, total, hideBalances, onAddAccount, onOpenAccoun
         ))
       )}
 
-      {/* Mobile floating add button */}
-      <button className="fab" onClick={onAddAccount} aria-label="Add account">
+      {/* Mobile floating button: opens a small menu above it (add account / transfer) */}
+      {menuOpen && <div className="fab-scrim" onClick={() => setMenuOpen(false)} />}
+      <div className={`fab-menu${menuOpen ? ' open' : ''}`} role="menu" aria-hidden={!menuOpen}>
+        <button className="fab-menu__item" role="menuitem" onClick={pick(onTransfer)} disabled={!canTransfer}
+          tabIndex={menuOpen ? 0 : -1}>
+          <span>Transfer</span>
+          <span className="fab-menu__icon"><Icon name="transfer" size={18} /></span>
+        </button>
+        <button className="fab-menu__item" role="menuitem" onClick={pick(onAddAccount)} tabIndex={menuOpen ? 0 : -1}>
+          <span>Add account</span>
+          <span className="fab-menu__icon"><Icon name="wallet" size={18} /></span>
+        </button>
+      </div>
+      <button className={`fab${menuOpen ? ' fab--open' : ''}`} onClick={() => setMenuOpen((o) => !o)}
+        aria-label={menuOpen ? 'Close menu' : 'Add account or transfer'} aria-expanded={menuOpen} aria-haspopup="menu">
         <Icon name="plus" size={26} />
       </button>
     </div>

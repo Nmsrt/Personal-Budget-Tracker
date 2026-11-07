@@ -40,7 +40,7 @@ Account balances are stored, not derived. Adding an expense deducts `amount` fro
 
 ### Account types
 
-Each account has `type`: `'cash'` (Physical Cash — on-hand, storage), `'bank'` (Traditional Bank) or `'wallet'` (Digital Wallet); list and labels in `ACCOUNT_TYPES` (`constants.js`). Older accounts may lack it — always read it through `accType(acc)` (`helpers.js`), which infers from the name; saving in `AccountModal` writes it explicitly. The Dashboard lists only cash accounts (hero total still covers all); the Accounts page groups every account by type. Rows render through `components/AccountList.jsx`.
+Each account has `type`: `'cash'` (Physical Cash — on-hand, storage), `'bank'` (Traditional Bank) or `'wallet'` (Digital Wallet); list and labels in `ACCOUNT_TYPES` (`constants.js`). Older accounts may lack it — always read it through `accType(acc)` (`helpers.js`), which infers from the name; saving in `AccountModal` writes it explicitly. The Dashboard shows a Summary with one row per type (total and share; colors from `ACCOUNT_TYPES`; rows open the Accounts page); the Accounts page groups every account by type, rendering rows through `components/AccountList.jsx`.
 
 ### Months
 
@@ -56,6 +56,6 @@ Spending is summarized per calendar month, keyed `YYYY-MM` (`monthKey` / `shiftM
 - Modals never autofocus a text field (the iOS keyboard would cover the sheet).
 - Expense rows have no inline buttons: tapping one opens the edit `ExpenseModal`, which also holds Delete (with undo toast). Mobile adds via the `.fab`; desktop via the page-header button.
 - Mobile nav is a floating frosted pill; `--nav-offset` (in `:root`) is its gap from the bottom edge and also drives `.main` bottom padding, the FAB and the toast position — change them together through that variable.
-- Dashboard account rows open `AccountDetailModal` (edit/delete live in its header via `Modal`'s `actions` prop). `settings.hideBalances` masks every money figure on the Dashboard, in that sheet, and the account balances in `ExpenseModal` (use `MASK` from `helpers.js`).
+- Account rows (Accounts page) open `AccountDetailModal` (edit/delete live in its header via `Modal`'s `actions` prop). `settings.hideBalances` masks every money figure on the Dashboard, in that sheet, and the account balances in `ExpenseModal` (use `MASK` from `helpers.js`).
 - Money is formatted with `fmt` in `helpers.js` (en-PH, PHP).
 - Export/import is a full-object JSON dump/restore; imported JSON is only validated for `accounts` and `expenses` keys.

@@ -222,7 +222,6 @@ export default function App() {
             onAddExpense={() => setShowAddExp(true)}
             onTransfer={() => setShowTransfer(true)}
             onAddAccount={() => setShowAddAcc(true)}
-            onOpenAccount={(acc) => setViewAccId(acc.id)}
             onViewAccounts={() => setPage('accounts')}
           />
         )}
@@ -232,6 +231,7 @@ export default function App() {
             total={total}
             hideBalances={settings.hideBalances}
             onAddAccount={() => setShowAddAcc(true)}
+            onTransfer={() => setShowTransfer(true)}
             onOpenAccount={(acc) => setViewAccId(acc.id)}
           />
         )}
