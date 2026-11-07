@@ -124,7 +124,7 @@ export function Expenses({ data, onAddExpense, onEditExpense }) {
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder={`Search ${monthLabel(month, { month: 'long' })}`}
+            placeholder="Search"
             enterKeyHint="search"
           />
           {query && (
@@ -141,7 +141,7 @@ export function Expenses({ data, onAddExpense, onEditExpense }) {
             onChange={(e) => setCat(e.target.value)}
             aria-label="Filter by category"
           >
-            <option value="All">All categories</option>
+            <option value="All">All</option>
             {CATEGORIES.map((c) => (
               <option key={c} value={c}>{CAT_ICONS[c]} {c}</option>
             ))}

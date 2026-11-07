@@ -1,3 +1,5 @@
+import { ACCOUNT_TYPES } from './constants'
+
 export const fmt = (n) =>
   new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(n ?? 0)
 
@@ -54,3 +56,19 @@ export const exportJSON = (data) => {
   a.click()
   URL.revokeObjectURL(a.href)
 }
+
+// Account type ('cash' | 'bank' | 'wallet'). Untyped (pre-type) accounts are inferred from the name.
+// Wallet names are checked first: "GCash" contains "cash" and "MariBank" contains "bank".
+const TYPE_IDS = ACCOUNT_TYPES.map((t) => t.id)
+export const accType = (acc) => {
+  if (TYPE_IDS.includes(acc.type)) return acc.type
+  const n = `${acc.id} ${acc.name}`.toLowerCase()
+  if (/gcash|maya|maribank|seabank|gotyme|tonik|cimb|grabpay|shopeepay|coins\.ph|wallet/.test(n)) return 'wallet'
+  if (/\bcash\b|on-?hand|storage|ipon|alkansya|piggy/.test(n)) return 'cash'
+  if (/bank|bdo|bpi|metrobank|landbank|pnb|rcbc|chinabank|eastwest/.test(n)) return 'bank'
+  return 'wallet'
+}
+
+// Accounts of one type, highest balance first (ties keep stored order)
+export const accountsOfType = (accounts, type) =>
+  accounts.filter((a) => accType(a) === type).sort((a, b) => b.balance - a.balance)

@@ -1,17 +1,17 @@
 import { useState, useEffect } from 'react'
 import { Modal } from './Modal'
-import { ACCOUNT_COLORS } from '../utils/constants'
-import { normColor } from '../utils/helpers'
+import { ACCOUNT_COLORS, ACCOUNT_TYPES } from '../utils/constants'
+import { normColor, accType } from '../utils/helpers'
 
 export function AccountModal({ open, onClose, onSave, title, initial }) {
-  const [form, setForm] = useState({ name: '', icon: '💰', color: '#1fd98a', balance: '' })
+  const [form, setForm] = useState({ name: '', icon: '💰', color: '#1fd98a', balance: '', type: 'cash' })
 
   useEffect(() => {
     if (!open) return
     setForm(
       initial
-        ? { name: initial.name, icon: initial.icon, color: normColor(initial.color), balance: String(initial.balance) }
-        : { name: '', icon: '💰', color: '#1fd98a', balance: '' }
+        ? { name: initial.name, icon: initial.icon, color: normColor(initial.color), balance: String(initial.balance), type: accType(initial) }
+        : { name: '', icon: '💰', color: '#1fd98a', balance: '', type: 'cash' }
     )
   }, [open, initial])
 
@@ -26,7 +26,24 @@ export function AccountModal({ open, onClose, onSave, title, initial }) {
       >
         <div className="form-group">
           <label className="form-label">Account Name</label>
-          <input className="form-input" value={form.name} onChange={set('name')} placeholder="e.g. Maya Wallet" autoFocus />
+          <input className="form-input" value={form.name} onChange={set('name')} placeholder="e.g. Maya Wallet" />
+        </div>
+        <div className="form-group">
+          <span className="form-label">Type</span>
+          <div className="segmented segmented--full" role="radiogroup" aria-label="Account type">
+            {ACCOUNT_TYPES.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                role="radio"
+                aria-checked={form.type === t.id}
+                className={`segmented__btn${form.type === t.id ? ' active' : ''}`}
+                onClick={() => setForm((p) => ({ ...p, type: t.id }))}
+              >
+                {t.icon} {t.short}
+              </button>
+            ))}
+          </div>
         </div>
         <div className="form-group">
           <label className="form-label">Emoji Icon</label>

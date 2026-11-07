@@ -1,8 +1,9 @@
 import { Icon } from './Icon'
 
-// Overview first (default landing page), then daily logging, settings
+// Overview first (default landing page), then accounts, daily logging, settings
 const NAV = [
   { id: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
+  { id: 'accounts',  label: 'Accounts',  icon: 'wallet'    },
   { id: 'expenses',  label: 'Expenses',  icon: 'list'      },
   { id: 'settings',  label: 'Settings',  icon: 'settings'  },
 ]
@@ -24,7 +25,6 @@ export function SyncBadge({ status }) {
 }
 
 export function Layout({ page, setPage, syncStatus, children }) {
-
   return (
     <div className="app">
 

@@ -8,8 +8,9 @@
     <meta name="theme-color" content="#d4f5e6" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
-    <!-- 'default' = dark status-bar text, which reads on the light neon-mint background -->
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <!-- 'black-translucent' lets the page (and its gradient) draw behind the status bar / Dynamic Island;
+         global.css adds a soft top scrim so iOS's white status text stays legible on the light theme -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <!-- Apply saved theme before first paint (key/shape owned by src/hooks/useSettings.js) -->
     <script>
       try {
@@ -18,6 +19,11 @@
       } catch (e) {}
     </script>
     <meta name="apple-mobile-web-app-title" content="Budget" />
+    <!-- Home-screen icon (iOS ignores the manifest icons). Source art: Icon.png; corners filled with green,
+         since iOS applies its own rounded mask and renders transparency/black corners as-is -->
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
     <meta name="format-detection" content="telephone=no" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

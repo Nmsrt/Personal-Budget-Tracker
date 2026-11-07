@@ -1,13 +1,14 @@
 import { useMemo } from 'react'
 import { Icon } from '../components/Icon'
+import { AccountList } from '../components/AccountList'
 import { CAT_ICONS } from '../utils/constants'
-import { fmt, monthKey, monthLabel, MASK } from '../utils/helpers'
+import { fmt, monthKey, monthLabel, MASK, accountsOfType } from '../utils/helpers'
 import { useToday } from '../hooks/useToday'
 
 export function Dashboard({
   data, total,
   hideBalances, onToggleHide,
-  onAddExpense, onTransfer, onAddAccount, onOpenAccount,
+  onAddExpense, onTransfer, onAddAccount, onOpenAccount, onViewAccounts,
 }) {
   const thisMonth = monthKey(useToday())
 
@@ -26,6 +27,8 @@ export function Dashboard({
   const money = (n) => (hideBalances ? MASK : fmt(n))
   const canTransfer = data.accounts.length > 1
   const accCount = data.accounts.length
+  const cashAccounts = useMemo(() => accountsOfType(data.accounts, 'cash'), [data.accounts])
+  const cashTotal = cashAccounts.reduce((s, a) => s + a.balance, 0)
 
   return (
     <div className="page-enter">
@@ -74,46 +77,21 @@ export function Dashboard({
         </button>
       </div>
 
-      {/* Accounts — one ledger card, a row per account */}
+      {/* Physical cash only (on-hand + storage); banks and wallets live on the Accounts page */}
       <div className="section-header">
-        <h2 className="section-title">Accounts</h2>
-        {accCount > 0 && <span className="section-count">{accCount}</span>}
+        <h2 className="section-title">Physical Cash</h2>
+        <button className="section-link" onClick={onViewAccounts}>
+          All accounts{accCount > 0 ? ` (${accCount})` : ''} <Icon name="arrowRight" size={14} />
+        </button>
       </div>
 
-      {accCount === 0 ? (
+      {cashAccounts.length === 0 ? (
         <div className="empty-card">
-          <div className="empty-card__icon">🏦</div>
-          <p>No accounts yet. Add one to get started!</p>
+          <div className="empty-card__icon">💵</div>
+          <p>No physical cash accounts yet. Add one and set its type to Physical Cash.</p>
         </div>
       ) : (
-        <div className="account-list">
-          {data.accounts.map((acc) => {
-            const share = total > 0 ? Math.max(0, Math.min(1, acc.balance / total)) : 0
-            return (
-              <button
-                key={acc.id}
-                className="account-row"
-                style={{ '--acc-color': acc.color }}
-                onClick={() => onOpenAccount(acc)}
-              >
-                <span className="account-row__icon">{acc.icon}</span>
-                <span className="account-row__info">
-                  <span className="account-row__name">{acc.name}</span>
-                  {!hideBalances && (
-                    <span className="account-row__share">
-                      <span className="account-row__share-bar">
-                        <span style={{ width: `${share * 100}%` }} />
-                      </span>
-                      {Math.round(share * 100)}%
-                    </span>
-                  )}
-                </span>
-                <span className="account-row__balance">{money(acc.balance)}</span>
-                <Icon name="arrowRight" size={18} className="account-row__arrow" />
-              </button>
-            )
-          })}
-        </div>
+        <AccountList accounts={cashAccounts} total={cashTotal} hideBalances={hideBalances} onOpenAccount={onOpenAccount} />
       )}
 
       {/* Spending by category */}

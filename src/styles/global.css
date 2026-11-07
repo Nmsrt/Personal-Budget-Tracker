@@ -55,6 +55,7 @@
   /* Background: neon mint / cyan / lime glows at the top, behind the glass hero. --bg-top must match
      THEME_COLOR in src/hooks/useSettings.js (status bar color). */
   --bg-top:       #d4f5e6;
+  --status-scrim: rgba(6, 36, 22, 0.34);   /* behind iOS's white status-bar text in the installed PWA */
   --bg-gradient:  radial-gradient(90% 60% at 0% 0%, rgba(46, 240, 154, 0.38) 0%, rgba(46, 240, 154, 0) 60%), radial-gradient(80% 55% at 100% 4%, rgba(56, 214, 255, 0.32) 0%, rgba(56, 214, 255, 0) 62%), radial-gradient(60% 40% at 55% 28%, rgba(190, 255, 90, 0.18) 0%, rgba(190, 255, 90, 0) 70%);
   --glass:        rgba(255, 255, 255, 0.5);
   --glass-line:   rgba(255, 255, 255, 0.85);
@@ -125,6 +126,7 @@
     --backdrop:     rgba(0, 0, 0, 0.6);
     --acc-text-mix: 55%;
     --bg-top:       #10241b;
+  --status-scrim: rgba(0, 0, 0, 0);
     --bg-gradient:  radial-gradient(90% 60% at 0% 0%, rgba(46, 240, 154, 0.2) 0%, rgba(46, 240, 154, 0) 60%), radial-gradient(80% 55% at 100% 4%, rgba(56, 214, 255, 0.15) 0%, rgba(56, 214, 255, 0) 62%), radial-gradient(60% 40% at 55% 28%, rgba(190, 255, 90, 0.07) 0%, rgba(190, 255, 90, 0) 70%);
     --glass:        rgba(255, 255, 255, 0.06);
     --glass-line:   rgba(255, 255, 255, 0.13);
@@ -169,6 +171,7 @@
   --backdrop:     rgba(0, 0, 0, 0.6);
   --acc-text-mix: 55%;
   --bg-top:       #10241b;
+  --status-scrim: rgba(0, 0, 0, 0);
   --bg-gradient:  radial-gradient(90% 60% at 0% 0%, rgba(46, 240, 154, 0.2) 0%, rgba(46, 240, 154, 0) 60%), radial-gradient(80% 55% at 100% 4%, rgba(56, 214, 255, 0.15) 0%, rgba(56, 214, 255, 0) 62%), radial-gradient(60% 40% at 55% 28%, rgba(190, 255, 90, 0.07) 0%, rgba(190, 255, 90, 0) 70%);
   --glass:        rgba(255, 255, 255, 0.06);
   --glass-line:   rgba(255, 255, 255, 0.13);
@@ -204,6 +207,21 @@ body {
   background-size: 100% 900px;
 }
 #root { background: transparent; }
+
+/* Installed iOS PWA uses status-bar style black-translucent, so the gradient runs up behind the
+   status bar / Dynamic Island. iOS then draws white status text; this soft fade keeps it legible
+   on the light theme without a hard edge. */
+@media (display-mode: standalone) {
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: calc(env(safe-area-inset-top) + 18px);
+    background: linear-gradient(var(--status-scrim), transparent);
+    pointer-events: none;
+    z-index: 90;
+  }
+}
 
 /* Never put overflow on html/body: on iOS that makes body its own scroll box
    and page scrolling can lock up. Horizontal overflow is clipped on .app. */
@@ -2022,6 +2040,40 @@ select.setting-row__control { width: auto; min-width: 190px; }
   color: var(--brand-deep);
   box-shadow: var(--shadow-sm), inset 0 0 0 1px var(--rule-strong);
 }
+
+/* ── Accounts page / dashboard link ── */
+.acc-group { margin-bottom: 4px; }
+.acc-group .section-title { display: flex; align-items: center; gap: 8px; }
+.acc-group__sum {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.section-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  background: transparent;
+  padding: 4px 0;
+  color: var(--brand-deep);
+  font-weight: 600;
+  font-size: 0.84rem;
+  cursor: pointer;
+}
+.section-link:hover { text-decoration: underline; }
+
+/* Full-width segmented control (account type picker) */
+.segmented--full { display: flex; width: 100%; }
+.segmented--full .segmented__btn { flex: 1; padding: 9px 6px; }
+
+.btn-secondary:disabled { opacity: 0.6; cursor: default; }
+
+.spin { animation: spin 0.9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
 
 /* ═══════════════════════════════════════════════════════════════════════════
    RESPONSIVE

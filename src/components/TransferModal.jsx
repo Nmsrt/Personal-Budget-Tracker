@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Modal } from './Modal'
-import { fmt } from '../utils/helpers'
+import { ACCOUNT_TYPES } from '../utils/constants'
+import { fmt, accountsOfType } from '../utils/helpers'
 
 const blank = (accounts) => ({
   fromId: accounts[0]?.id || '',
@@ -22,6 +23,18 @@ export function TransferModal({ open, onClose, accounts, onSave }) {
   const set = (k) => (e) => setForm((p) => ({ ...p, [k]: e.target.value }))
   const from = accounts.find((a) => a.id === form.fromId)
 
+  // Same grouped option list for From and To
+  const options = ACCOUNT_TYPES.map((t) => {
+    const group = accountsOfType(accounts, t.id)
+    return group.length === 0 ? null : (
+      <optgroup key={t.id} label={t.label}>
+        {group.map((a) => (
+          <option key={a.id} value={a.id}>{a.icon} {a.name} — {fmt(a.balance)}</option>
+        ))}
+      </optgroup>
+    )
+  })
+
   const handleSubmit = (e) => {
     e.preventDefault()
     const amt = parseFloat(form.amount)
@@ -37,24 +50,20 @@ export function TransferModal({ open, onClose, accounts, onSave }) {
         <div className="form-group">
           <label className="form-label">From</label>
           <select className="form-select" value={form.fromId} onChange={set('fromId')}>
-            {accounts.map((a) => (
-              <option key={a.id} value={a.id}>{a.icon} {a.name} — {fmt(a.balance)}</option>
-            ))}
+            {options}
           </select>
         </div>
         <div className="form-group">
           <label className="form-label">To</label>
           <select className="form-select" value={form.toId} onChange={set('toId')}>
-            {accounts.map((a) => (
-              <option key={a.id} value={a.id}>{a.icon} {a.name} — {fmt(a.balance)}</option>
-            ))}
+            {options}
           </select>
         </div>
         <div className="form-group">
           <label className="form-label">Amount (₱)</label>
           <input
             className="form-input" type="number" value={form.amount} onChange={set('amount')}
-            placeholder="0.00" min="0" step="0.01" autoFocus
+            placeholder="0.00" min="0" step="0.01" inputMode="decimal"
           />
         </div>
         {error && <p className="form-error">{error}</p>}

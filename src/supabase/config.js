@@ -57,7 +57,8 @@ export const subscribeToSupabase = (onData, onEmpty, onError) => {
     })
 
   const channel = supabase
-    .channel('budget-sync')
+    // Unique topic per subscription: reconnecting creates a new channel while the old one is still closing
+    .channel(`budget-sync-${Date.now()}`)
     .on(
       'postgres_changes',
       { event: '*', schema: 'public', table: 'budget', filter: `id=eq.${ROW_ID}` },
@@ -66,7 +67,7 @@ export const subscribeToSupabase = (onData, onEmpty, onError) => {
       }
     )
     .subscribe((status, err) => {
-      if (status === 'CHANNEL_ERROR' && !cancelled) {
+      if ((status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') && !cancelled) {
         onError?.(err || new Error('Realtime channel error'))
       }
     })

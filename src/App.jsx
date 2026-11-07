@@ -7,6 +7,7 @@ import { ConfirmModal }   from './components/ConfirmModal'
 import { AccountDetailModal } from './components/AccountDetailModal'
 import { Toast }          from './components/Toast'
 import { Dashboard }      from './pages/Dashboard'
+import { Accounts }       from './pages/Accounts'
 import { Expenses }       from './pages/Expenses'
 import { Settings }       from './pages/Settings'
 import { useBudget }      from './hooks/useBudget'
@@ -15,7 +16,7 @@ import { INIT_DATA }      from './utils/constants'
 import { uid, exportJSON, todayStr, normColor } from './utils/helpers'
 
 export default function App() {
-  const { data, update, syncStatus } = useBudget()
+  const { data, update, syncStatus, reconnect, reconnecting } = useBudget()
   const { settings, setSetting }     = useSettings()
 
   const [page, setPage] = useState('dashboard')
@@ -44,6 +45,7 @@ export default function App() {
         icon:    form.icon || '💰',
         color:   normColor(form.color),
         balance: parseFloat(form.balance) || 0,
+        type:    form.type,
       }],
     }))
     setShowAddAcc(false)
@@ -54,7 +56,7 @@ export default function App() {
       ...prev,
       accounts: prev.accounts.map((a) =>
         a.id === editAccData.id
-          ? { ...a, name: form.name.trim(), icon: form.icon, color: normColor(form.color), balance: parseFloat(form.balance) || 0 }
+          ? { ...a, name: form.name.trim(), icon: form.icon, color: normColor(form.color), balance: parseFloat(form.balance) || 0, type: form.type }
           : a
       ),
     }))
@@ -221,6 +223,16 @@ export default function App() {
             onTransfer={() => setShowTransfer(true)}
             onAddAccount={() => setShowAddAcc(true)}
             onOpenAccount={(acc) => setViewAccId(acc.id)}
+            onViewAccounts={() => setPage('accounts')}
+          />
+        )}
+        {page === 'accounts' && (
+          <Accounts
+            data={data}
+            total={total}
+            hideBalances={settings.hideBalances}
+            onAddAccount={() => setShowAddAcc(true)}
+            onOpenAccount={(acc) => setViewAccId(acc.id)}
           />
         )}
         {page === 'expenses' && (
@@ -236,6 +248,8 @@ export default function App() {
             setSetting={setSetting}
             data={data}
             syncStatus={syncStatus}
+            onReconnect={reconnect}
+            reconnecting={reconnecting}
             onExport={() => exportJSON(data)}
             onImport={handleImport}
             onReset={resetData}

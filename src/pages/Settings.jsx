@@ -8,13 +8,15 @@ const THEMES = [
   { id: 'dark',   label: 'Dark'   },
 ]
 
-export function Settings({ settings, setSetting, data, syncStatus, onExport, onImport, onReset }) {
+export function Settings({ settings, setSetting, data, syncStatus, onReconnect, reconnecting, onExport, onImport, onReset }) {
   const online = syncStatus === 'online'
   const syncText = !hasSupabaseConfig
     ? 'Supabase is not configured. Data is saved on this device only.'
-    : online
-      ? 'Connected. Changes sync across your devices.'
-      : "Can't reach Supabase. Changes are saved on this device for now."
+    : reconnecting
+      ? 'Reconnecting to Supabase…'
+      : online
+        ? 'Connected. Changes sync across your devices.'
+        : "Can't reach Supabase. Changes are saved on this device for now."
 
   return (
     <div className="page-enter">
@@ -62,6 +64,20 @@ export function Settings({ settings, setSetting, data, syncStatus, onExport, onI
             </div>
             <SyncBadge status={syncStatus} />
           </div>
+          {hasSupabaseConfig && (
+            <div className="setting-row">
+              <div className="setting-row__text">
+                <div className="setting-row__label">Reconnect</div>
+                <div className="setting-row__hint">
+                  Reload from Supabase and restart live sync. Unsynced changes on this device are uploaded first.
+                </div>
+              </div>
+              <button className="btn-secondary setting-row__control" onClick={onReconnect} disabled={reconnecting}>
+                <Icon name="refresh" size={15} className={reconnecting ? 'spin' : undefined} />
+                {reconnecting ? 'Reconnecting…' : 'Reconnect'}
+              </button>
+            </div>
+          )}
         </div>
       </section>
 

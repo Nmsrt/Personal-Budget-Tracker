@@ -71,7 +71,6 @@ export function ExpenseModal({ open, onClose, accounts, hideBalances, onSave, on
               onChange={(e) => setField('amount', cleanAmount(e.target.value))}
               placeholder="0.00"
               aria-label="Amount"
-              autoFocus={!editing}
             />
           </label>
 
