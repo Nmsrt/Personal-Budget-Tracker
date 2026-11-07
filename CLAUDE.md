@@ -40,7 +40,7 @@ Account balances are stored, not derived. Adding an expense deducts `amount` fro
 
 ### Account types
 
-Each account has `type`: `'cash'` (Physical Cash — on-hand, storage), `'bank'` (Traditional Bank) or `'wallet'` (Digital Wallet); list and labels in `ACCOUNT_TYPES` (`constants.js`). Older accounts may lack it — always read it through `accType(acc)` (`helpers.js`), which infers from the name; saving in `AccountModal` writes it explicitly. The Dashboard shows a Summary with one row per type (total and share; colors from `ACCOUNT_TYPES`; rows open the Accounts page); the Accounts page groups every account by type, rendering rows through `components/AccountList.jsx`.
+Each account has `type`: `'cash'` (Physical Cash — on-hand, storage), `'bank'` (Traditional Bank) or `'wallet'` (Digital Wallet); list and labels in `ACCOUNT_TYPES` (`constants.js`). Older accounts may lack it — always read it through `accType(acc)` (`helpers.js`), which infers from the name; saving in `AccountModal` writes it explicitly. The Dashboard shows a Summary with one row per type (total and share, neutral `account-row--plain` styling; rows open the Accounts page); the Accounts page groups every account by type, rendering rows through `components/AccountList.jsx`.
 
 ### Months
 

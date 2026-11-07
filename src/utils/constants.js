@@ -23,9 +23,9 @@ export const ACCOUNT_COLORS = [
 // Account types, in display order. Stored as `account.type`; accounts saved before types
 // existed have none, and `accType` (helpers.js) infers one from the name.
 export const ACCOUNT_TYPES = [
-  { id: 'cash',   label: 'Physical Cash',    short: 'Cash',   icon: '💵', color: '#1fd98a' },
-  { id: 'bank',   label: 'Traditional Bank', short: 'Bank',   icon: '🏦', color: '#38d6ff' },
-  { id: 'wallet', label: 'Digital Wallet',   short: 'Wallet', icon: '📱', color: '#a3e635' },
+  { id: 'cash',   label: 'Physical Cash',    short: 'Cash',   icon: '💵' },
+  { id: 'bank',   label: 'Traditional Bank', short: 'Bank',   icon: '🏦' },
+  { id: 'wallet', label: 'Digital Wallet',   short: 'Wallet', icon: '📱' },
 ]
 
 export const DEFAULT_ACCOUNTS = [

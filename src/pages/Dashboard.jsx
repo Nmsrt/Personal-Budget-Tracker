@@ -92,7 +92,7 @@ export function Dashboard({
         {typeTotals.map((t) => {
           const share = total > 0 ? Math.max(0, Math.min(1, t.sum / total)) : 0
           return (
-            <button key={t.id} className="account-row" style={{ '--acc-color': t.color }} onClick={onViewAccounts}>
+            <button key={t.id} className="account-row account-row--plain" onClick={onViewAccounts}>
               <span className="account-row__icon">{t.icon}</span>
               <span className="account-row__info">
                 <span className="account-row__name">{t.label}</span>
