@@ -754,15 +754,27 @@ input[type="date"]::-webkit-calendar-picker-indicator { opacity: 0.4; cursor: po
   display: inline-flex; align-items: center; justify-content: center;
   width: 40px; height: 40px;
   flex-shrink: 0;
-  border: 1px solid var(--glass-line);
+  padding: 0;
+  border: 0;
   border-radius: 50%;
-  background: var(--glass);
-  color: var(--ink);
+  background: transparent;
+  color: var(--ink-soft);
   cursor: pointer;
-  transition: box-shadow 0.18s;
+  transition: color 0.18s, background-color 0.18s, transform 0.12s;
 }
 
-.hero-card__eye:hover { box-shadow: 0 0 0 3px var(--brand-glow); }
+@media (hover: hover) {
+  .hero-card__eye:hover { color: var(--brand-deep); }
+}
+
+.hero-card__eye:focus-visible { color: var(--ink); }
+
+/* Touch has no hover and tap highlight is off globally — give a press response */
+.hero-card__eye:active {
+  background: var(--glass);
+  color: var(--ink);
+  transform: scale(0.92);
+}
 
 /* Dashboard title is redundant with the mobile top bar + hero */
 .page-header--dash { margin-bottom: 22px; }
